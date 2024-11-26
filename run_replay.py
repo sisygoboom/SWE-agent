@@ -78,7 +78,7 @@ def process_single_traj(traj_path: str, config_file: str, data_path: str, suffix
             data = json.load(file)
         replay_task_instances_path = create_task_instances_tmp_file(data)
     else:
-        # Assume data_path is a github url or local url
+        # Assume data_path is a GitHub or Bitbucket URL or local URL
         is_other = True
         replay_task_instances_path = data_path
 

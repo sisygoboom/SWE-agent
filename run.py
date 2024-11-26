@@ -51,6 +51,12 @@ from sweagent.environment.utils import (
     get_data_path_name,
     get_gh_issue_data,
     parse_gh_issue_url,
+    is_bitbucket_issue_url,
+    is_bitbucket_repo_url,
+    get_bb_issue_data,
+    parse_bb_issue_url,
+    get_bb_issue_data,
+    get_associated_bb_commit_urls,
 )
 
 __doc__: str = """ Run inference. Usage examples:
@@ -278,7 +284,32 @@ class OpenPRHook(MainHook):
             logger.info("Not opening PR because exit status was %s and not submitted.", info["exit_status"])
             return False
         try:
-            issue = get_gh_issue_data(self._data_path, token=self._token)
+            if is_bitbucket_issue_url(self._data_path):
+                issue = get_bb_issue_data(self._data_path, token=self._token)
+                if issue['state'] != "open":
+                    logger.info(f"Issue is not open (state={issue['state']}. Skipping PR creation.")
+                    return False
+                if issue.get('assignee'):
+                    logger.info("Issue is already assigned. Skipping PR creation. Be nice :)")
+                    return False
+                org, repo, issue_number = parse_bb_issue_url(self._data_path)
+                associated_commits = get_associated_bb_commit_urls(org, repo, issue_number, token=self._token)
+            elif is_github_issue_url(self._data_path):
+                issue = get_gh_issue_data(self._data_path, token=self._token)
+                if issue.state != "open":
+                    logger.info(f"Issue is not open (state={issue.state}. Skipping PR creation.")
+                    return False
+                if issue.assignee:
+                    logger.info("Issue is already assigned. Skipping PR creation. Be nice :)")
+                    return False
+                if issue.locked:
+                    logger.info("Issue is locked. Skipping PR creation.")
+                    return False
+                org, repo, issue_number = parse_gh_issue_url(self._data_path)
+                associated_commits = get_associated_commit_urls(org, repo, issue_number, token=self._token)
+            else:
+                logger.info("Currently only GitHub and Bitbucket are supported to open PRs to. Skipping PR creation.")
+                return False
         except InvalidGithubURL:
             logger.info("Currently only GitHub is supported to open PRs to. Skipping PR creation.")
             return False

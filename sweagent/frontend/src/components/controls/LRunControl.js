@@ -17,11 +17,13 @@ function LRunControl({
   runConfigDefault,
 }) {
   // ps = problem statement
-  const [psType, setPsType] = useState("gh");
+  const [psType, setPsType] = useState("gh"); // Default to GitHub
   const [psInputValue, setPsInputValue] = useState("");
   const defaultInstallCommand = "pip install --editable .";
-  const defaultPS =
-    "https://github.com/marshmallow-code/marshmallow/issues/1357";
+  const defaultPS = {
+    gh: "https://github.com/marshmallow-code/marshmallow/issues/1357",
+    bb: "https://bitbucket.org/owner/repo/issues/1"
+  };
 
   const handlePsTypeChange = (event) => {
     const selectedType = event.target.value;
@@ -35,10 +37,10 @@ function LRunControl({
   function getPsInput() {
     // Problem statement input controls based on the value of the problem statement type
     // dropdown menu.
-    if (psType === "gh") {
+    if (psType === "gh" || psType === "bb") {
       return (
         <div className="input-group mb-3">
-          <span className="input-group-text">GitHub issue URL</span>
+          <span className="input-group-text">{psType === "gh" ? "GitHub" : "Bitbucket"} issue URL</span>
           <input
             type="text"
             className="form-control"
@@ -48,7 +50,7 @@ function LRunControl({
                 draft.environment.data_path = e.target.value;
               });
             }}
-            placeholder={"Example: " + defaultPS}
+            placeholder={"Example: " + defaultPS[psType]}
             value={psInputValue}
           />
         </div>
@@ -232,7 +234,7 @@ function LRunControl({
                 onChange={handlePsTypeChange}
               >
                 <option value="gh">GitHub issue URL</option>
-                <option value="local">Local file</option>
+                <option value="bb">Bitbucket issue URL</option>\n                <option value="local">Local file</option>
                 <option value="write">Write here</option>
               </select>
             </div>

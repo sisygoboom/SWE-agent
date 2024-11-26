@@ -33,6 +33,9 @@ DOCKER_COMPOSE_STARTUP_DELAY = float(keys_config.get("SWE_AGENT_DOCKER_START_UP_
 GITHUB_ISSUE_URL_PATTERN = re.compile(r"github\.com\/(.*?)\/(.*?)\/issues\/(\d+)")
 GITHUB_REPO_URL_PATTERN = re.compile(r".*[/@]?github\.com\/([^/]+)\/([^/]+)")
 
+BITBUCKET_ISSUE_URL_PATTERN = re.compile(r"bitbucket\.org\/(.*?)\/(.*?)\/issues\/(\d+)")
+BITBUCKET_REPO_URL_PATTERN = re.compile(r".*[/@]?bitbucket\.org\/([^/]+)\/([^/]+)")
+
 CTF_CHALLENGES_CATEGORIES = {
     "rev": "reverse engineering",
     "pwn": "binary exploitation",
@@ -69,6 +72,53 @@ def is_github_issue_url(data_path: str) -> bool:
 def is_github_repo_url(data_path: str) -> bool:
     """Check if data_path is an URL pointing to a github repository.
     Paths to issues or PRs will also match this pattern.
+def is_bitbucket_issue_url(data_path: str) -> bool:
+    """Check if data_path is an URL pointing to a Bitbucket issue"""
+    return BITBUCKET_ISSUE_URL_PATTERN.search(data_path) is not None
+
+
+def is_bitbucket_repo_url(data_path: str) -> bool:
+    """Check if data_path is an URL pointing to a Bitbucket repository.
+    Paths to issues or PRs will also match this pattern.
+    """
+    return BITBUCKET_REPO_URL_PATTERN.search(data_path) is not None
+
+def get_bb_issue_data(data_path: str, token: str) -> Any:
+    """Fetch issue data from Bitbucket using the API"""
+    match = BITBUCKET_ISSUE_URL_PATTERN.search(data_path)
+    if not match:
+        raise ValueError("Invalid Bitbucket issue URL")
+    owner, repo, issue_id = match.groups()
+    url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}/issues/{issue_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
+def parse_bb_issue_url(data_path: str) -> tuple[str, str, str]:
+    """Parse a Bitbucket issue URL into its components"""
+    match = BITBUCKET_ISSUE_URL_PATTERN.search(data_path)
+    if not match:
+        raise ValueError("Invalid Bitbucket issue URL")
+    return match.groups()
+
+
+def get_associated_bb_commit_urls(owner: str, repo: str, issue_number: str, token: str) -> list[str]:
+    """Get associated commit URLs for a Bitbucket issue"""
+    url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}/issues/{issue_number}/comments"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    comments = response.json().get("values", [])
+    commit_urls = []
+    for comment in comments:
+        if "commit" in comment:
+            commit_urls.append(comment["commit"]["links"]["html"]["href"])
+    return commit_urls
+
+
+
     """
     return GITHUB_REPO_URL_PATTERN.search(data_path) is not None
 
